@@ -1,25 +1,27 @@
-import carla
+class PIDcontroller:
+    def __init__(self, kp, ki, kd, dt=0.01):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.dt = dt
+    
+        self.previous_error = 0
+        self.integral = 0
+    
+    def run(self, target, current):
+        error = target - current
+        self.integral += error * self.dt
+        derivative = (error - self.previous_error) / self.dt
 
-class PIDcontroller():
-    """ Pass in parameters for a standard PID controller"""
-    def __init__(self, Kp, Ki, Kd):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kp = Kd
+        output = self.kp * error + self.ki * self.integral + self.kd * derivative
+        self.previous_error = error
 
-        self.prev_error = 0.0
-        self.integral = 0.0
+        throttle, steer, brake = 0
+        if output >= 0:
+            throttle = min(output, 1.0)
+            brake = 0.0
+        else:
+            throttle = 0.0
+            brake = min(abs(output), 1.0)
 
-    def run_step(self, error, dt):
-        self.integral += error * dt
-        derivative = (error - self.prev_error) / dt if dt > 0 else 0.0
-
-        output = self.Kp * error + self.Ki * self.integral + self.Kd * derivative
-        self.prev_error = error
-
-        control = carla.VehicleControl()
-        control.steer = max(-1.0, min(1.0, output))
-        control.throttle = 0
-        control.brake = 0
-
-        return control
+        return steer, throttle, brake
